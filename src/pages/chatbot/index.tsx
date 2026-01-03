@@ -123,29 +123,37 @@ export default function Chatbot() {
   );
 }
 
-function extractCityFromInput(input: string): string | null {
-  const cityPattern = /(北京|上海|广州|深圳|杭州|成都|武汉|西安|重庆|南京|天津|苏州|郑州|长沙|东莞|宁波|佛山|合肥|青岛|昆明|沈阳|厦门|济南|福州|哈尔滨|大连|温州|南宁|贵阳|太原|石家庄|南昌)/;
-  const match = input.match(cityPattern);
-  return match ? match[1] : null;
-}
+// function extractCityFromInput(input: string): string | null {
+//   const cityPattern = /(北京|上海|广州|深圳|杭州|成都|武汉|西安|重庆|南京|天津|苏州|郑州|长沙|东莞|宁波|佛山|合肥|青岛|昆明|沈阳|厦门|济南|福州|哈尔滨|大连|温州|南宁|贵阳|太原|石家庄|南昌)/;
+//   const match = input.match(cityPattern);
+//   return match ? match[1] : null;
+// }
 
 async function generateBotResponse(userInput: string): Promise<string> {
   const lowerInput = userInput.toLowerCase();
   
   // Weather query detection
   if (lowerInput.includes('天气') || lowerInput.includes('温度')) {
-    const city = extractCityFromInput(userInput);
+    // const city =  extractCityFromInput(userInput);
+    const city = userInput;
     
     if (city) {
       const result = await weatherService.getWeather(city);
       
       if (result.success && result.data) {
         const { data } = result;
-        return `${data.icon} ${data.city}天气情况：
+        return `${data.icon} ${data.province}省${data.city}天气情况：
+省份：${data.province}
+城市：${data.city}
+城市代码：${data.adcode}
 温度：${data.temperature}
 天气：${data.description}
 湿度：${data.humidity}
-风速：${data.windSpeed}`;
+风向：${data.windDirection}
+风力：${data.windPower}
+温度（精确）：${data.temperature_float}°C
+湿度（精确）：${data.humidity_float}%
+更新时间：${data.reporttime}`;
       } else {
         return result.message || '查询失败，请稍后重试';
       }
@@ -165,5 +173,5 @@ async function generateBotResponse(userInput: string): Promise<string> {
   }
   
   // Default response
-  return '抱歉，我不太明白您的意思。请问您想查询哪个城市的天气？';
+  return '抱歉，我不太明白您的意思。您可以查询天气。';
 }
