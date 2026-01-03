@@ -21,8 +21,8 @@ interface WeatherResult {
   message?: string;
 }
 
-// 已移除模拟数据，改用真实API调用
-
+// 定义API基础URL
+const API_BASE_URL = 'http://localhost:3000';
 
 // 天气查询服务
 export const weatherService = {
@@ -30,7 +30,7 @@ export const weatherService = {
   getWeather: async (city: string): Promise<WeatherResult> => {
     try {
       // 调用本地mcp服务的query-weather工具
-      const response = await fetch('http://localhost:3001/api/query-weather', {
+      const response = await fetch(`${API_BASE_URL}/api/query-weather`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
