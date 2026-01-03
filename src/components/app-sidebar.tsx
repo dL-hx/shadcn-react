@@ -15,6 +15,7 @@ import {
   SearchIcon,
   SettingsIcon,
   UsersIcon,
+  BotIcon
 } from "lucide-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -62,6 +63,11 @@ const data = {
       title: "Team",
       url: "/team",
       icon: UsersIcon,
+    },
+        {
+      title: "Chat Bot",
+      url: "/chatbot",
+      icon: BotIcon,
     },
   ],
   navClouds: [
