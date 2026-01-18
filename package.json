@@ -1,0 +1,29 @@
+{
+  "name": "chat-bot-monorepo",
+  "version": "1.0.0",
+  "description": "Monorepo for chat bot project",
+  "main": "index.js",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./packages/*\" run dev",
+    "build": "pnpm --filter \"./packages/*\" run build",
+    "install": "pnpm install",
+    "clean": "rm -rf node_modules && rm -rf packages/*/node_modules",
+    "test": "pnpm --filter \"./packages/*\" run test || echo \"No test scripts found in packages\"",
+    "lint": "pnpm --filter \"./packages/*\" run lint"
+  },
+  "keywords": [
+    "monorepo",
+    "chatbot",
+    "mcp"
+  ],
+  "author": "",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/chat-bot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/username/chat-bot/issues"
+  },
+  "homepage": "https://github.com/username/chat-bot#readme"
+}
