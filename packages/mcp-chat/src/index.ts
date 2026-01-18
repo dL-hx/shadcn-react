@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { connectMcp, getMcpClient, getTools,  getCurrentMcpServer, getAvailableMcpServers } from "./mcpClient";
+import { connectMcp, getMcpClient, getTools } from "./mcpClient";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { OpenAI } from "openai";
 import { Response } from "express";
@@ -191,22 +191,7 @@ function notifStream(stream: Response, streamData: any) {
   stream.write(JSON.stringify({ role: "assistant", ...streamData }) + "###ABC###");
 }
 
-// 切换MCP服务器API
-app.get('/api/mcp/servers', (req, res) => {
-  const servers = getAvailableMcpServers();
-  const currentServer = getCurrentMcpServer();
-  
-  res.json({
-    success: true,
-    currentServer,
-    servers: servers.map(s => ({
-      name: s.name,
-      url: s.url,
-      description: s.description,
-      isCurrent: s.name === currentServer
-    }))
-  });
-});
+
 
 
 app.listen(3500, async () => {
