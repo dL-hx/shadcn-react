@@ -35,9 +35,8 @@ let aiMessage = "";
 let toolCallCount = 0;
 
 app.post("/chat", async (req, res) => {
-  // userContent：用户的问题
-  const { userContent } = req.body as { userContent: string | undefined };
-  console.log(userContent);
+  const { userContent, deepSearch } = req.body as { userContent: string | undefined; deepSearch?: boolean };
+  console.log(userContent, deepSearch);
   if (!userContent) {
     res.status(400).send("缺少userContent字段");
     throw new Error("缺少userContent字段");
@@ -50,7 +49,8 @@ app.post("/chat", async (req, res) => {
       messages,
       stream: true,
       tools: getTools(),
-    });
+      enable_thinking: deepSearch || false,
+    } as QwenChatCompletion);
     // 存放工具的参数的
     let toolCallArgsStr = "";
     // 工具名称
