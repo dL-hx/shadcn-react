@@ -105,29 +105,6 @@ app.post("/chat", async (req, res) => {
         const result = { type: "mcpContent", content: "MCP工具调用成功！", toolName: toolName, toolResult: JSON.stringify(mcpRes), toolCallCount: toolCallCount };
         console.log('发送MCP内容事件到前端:', JSON.stringify(result));
         notifStream(res, result);
-        
-        // 尝试解析股票数据
-        try {
-          const mcpContent = mcpRes.content as string;
-          console.log('开始解析股票数据，MCP返回内容长度:', mcpContent.length);
-          console.log('MCP返回内容前200字符:', mcpContent.substring(0, 200));
-          if (mcpContent.includes('股价') || mcpContent.includes('价格') || mcpContent.includes('股票')) {
-            console.log('检测到股票相关关键词，开始解析');
-            const stockData = parseStockData(mcpContent);
-            console.log('解析到股票数据数量:', stockData.length);
-            if (stockData.length > 0) {
-              const stockResult = { type: "stockData", content: JSON.stringify(stockData) };
-              console.log('发送股票数据事件到前端:', JSON.stringify(stockResult));
-              notifStream(res, stockResult);
-            } else {
-              console.log('未解析到股票数据');
-            }
-          } else {
-            console.log('MCP返回内容不包含股票相关关键词');
-          }
-        } catch (parseError) {
-          console.log('解析股票数据失败:', parseError);
-        }
         // 再次调用大模型组合对话
         messages.push({ role: "user", content: mcpRes.content as string });
         const completionb = await openai.chat.completions.create({
@@ -158,25 +135,6 @@ app.post("/chat", async (req, res) => {
     }
   }
 });
-
-// 解析股票数据
-function parseStockData(content: string) {
-  const stockData: { date: string; price: number }[] = [];
-  
-  const pricePattern = /(\d{4}-\d{2}-\d{2})[^0-9]*([0-9]+\.?[0-9]*)/g;
-  let match;
-  
-  while ((match = pricePattern.exec(content)) !== null) {
-    if (match[1] && match[2]) {
-      stockData.push({
-        date: match[1],
-        price: parseFloat(match[2])
-      });
-    }
-  }
-  
-  return stockData;
-}
 
 // 流式输出
 function notifStream(stream: Response, streamData: any) {

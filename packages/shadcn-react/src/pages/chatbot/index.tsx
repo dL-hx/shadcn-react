@@ -317,16 +317,6 @@ async function callMcpChat(userInput: string, onStreamUpdate: (update: StreamUpd
                   toolCallCount: toolCallCount
                 });
               }
-            } else if (data.type === 'stockData' && data.content) {
-              try {
-                const stockData = JSON.parse(data.content);
-                console.log('前端收到股票数据事件:', stockData);
-                onStreamUpdate({
-                  stockData: stockData
-                });
-              } catch (parseError) {
-                console.error('Parse stock data error:', parseError);
-              }
             } else if (data.type === 'error' && data.content) {
               accumulatedText += data.content;
               onStreamUpdate({
