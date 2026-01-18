@@ -28,9 +28,14 @@ let tools: Tool[] = [];
  */
 async function connectMcp(): Promise<Tool[]> {
   try {
-    // 百炼大模型MCP服务地址
-    const mcpUrl = new URL("https://dashscope.aliyuncs.com/api/v1/mcp/");
-    const transport = new StreamableHTTPClientTransport(mcpUrl);
+    const mcpUrl = new URL("http://localhost:3001/mcp");
+    const transport = new StreamableHTTPClientTransport(mcpUrl, {
+      requestInit: {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    });
     
     // 建立连接
     await client.connect(transport);

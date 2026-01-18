@@ -24,16 +24,8 @@ app.use(cors());
 app.use(express.json());
 
 const prompt = `
-你是一位专业的股票与金融市场分析师。当用户提出与股票、指数、行业板块或金融资讯相关的问题时，请主动调用浏览器工具（优先选用东方财富网（https://quote.eastmoney.com）权威中文财经平台，使用工具获取HTML网页内容）进行实时信息检索，确保数据准确、来源可靠。
-
-你需要基于查询结果，为用户提供以下内容：
-
-目标股票/指数的基本信息（如代码、当前价格、涨跌幅、市值等）；
-近期走势分析（包括日K线趋势、关键支撑/阻力位、成交量变化等）；
-基本面或消息面简要解读（如财报亮点、重大公告、行业政策影响等）；
-风险提示与投资建议（保持客观中立，不构成投资推荐）。
-所有回答必须以 Markdown 格式 输出，结构清晰、重点突出，可适当使用标题、列表、加粗、表格等元素提升可读性。
-若无法获取有效数据或信息不足，请如实说明，切勿臆测或编造内容。
+你是一个天气查询智能体。你将调用名为 get_weather 的 MCP 服务来查询天气信息。
+请优先调用工具获取结构化的天气数据，并对天气情况做简明解释。
 `;
 
 const messages: ChatCompletionMessageParam[] = [{ role: "system", content: prompt }];
@@ -110,7 +102,7 @@ app.post("/chat", async (req, res) => {
         console.log("MCP工具调用完成，返回结果:", JSON.stringify(mcpRes));
         console.log("MCP工具返回内容:", mcpRes.content);
         // 返回前端
-        const result = { type: "mcpContent", content: "mcp工具获取文章内容成功！", toolName: toolName, toolResult: JSON.stringify(mcpRes), toolCallCount: toolCallCount };
+        const result = { type: "mcpContent", content: "MCP工具调用成功！", toolName: toolName, toolResult: JSON.stringify(mcpRes), toolCallCount: toolCallCount };
         console.log('发送MCP内容事件到前端:', JSON.stringify(result));
         notifStream(res, result);
         
