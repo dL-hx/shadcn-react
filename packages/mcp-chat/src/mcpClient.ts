@@ -43,6 +43,9 @@ async function connectMcp(): Promise<Tool[]> {
     // 获取工具列表
     const toolsRes = await client.listTools();
     
+    console.log("MCP服务器返回的工具数量:", toolsRes.tools.length);
+    console.log("工具列表:", toolsRes.tools.map((t: any) => t.name));
+    
     // 转换工具格式为OpenAI兼容格式
     tools = toolsRes.tools.map((item: any) => ({
       type: "function",
@@ -93,6 +96,7 @@ async function callTool(toolName: string, args: any): Promise<ToolResponse> {
     return result;
   } catch (error: any) {
     console.error(`调用工具 ${toolName} 失败:`, error.message);
+    
     throw error;
   }
 }

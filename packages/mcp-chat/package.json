@@ -4,7 +4,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch ./src/index.ts"
+    "dev": "tsx watch ./src/index.ts",
+    "dev:api": "tsx watch ./src/index.ts",
+    "dev:mcp": "tsx watch ./src/mcpServer.ts"
   },
   "keywords": [],
   "author": "",
@@ -12,9 +14,11 @@
   "description": "",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.13.3",
+    "concurrently": "^9.1.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "openai": "^5.8.2"
+    "openai": "^5.8.2",
+    "playwright": "^1.49.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

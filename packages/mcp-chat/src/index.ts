@@ -24,8 +24,16 @@ app.use(cors());
 app.use(express.json());
 
 const prompt = `
-你是一个天气查询智能体。你将调用名为 get_weather 的 MCP 服务来查询天气信息。
-请优先调用工具获取结构化的天气数据，并对天气情况做简明解释。
+你是一个智能助手，可以帮助用户查询天气信息和获取网页内容。
+
+可用的工具：
+1. get_weather: 查询指定城市的天气信息
+2. fetch_webpage: 爬取指定网页的内容并提取主要文本信息
+
+当用户询问天气时，使用 get_weather 工具。
+当用户提供网页链接或要求获取网页内容时，使用 fetch_webpage 工具。
+
+请优先调用工具获取结构化的数据，并对结果做简明解释。
 `;
 
 const messages: ChatCompletionMessageParam[] = [{ role: "system", content: prompt }];
@@ -95,18 +103,40 @@ app.post("/chat", async (req, res) => {
         toolCallCount++;
         // 调用mcp获取网页内容
         console.log('准备调用MCP工具，工具名:', toolName, '参数:', toolCallArgsStr);
+        
+        let parsedArgs;
+        try {
+          parsedArgs = JSON.parse(toolCallArgsStr);
+          console.log('参数解析成功:', JSON.stringify(parsedArgs, null, 2));
+        } catch (parseError) {
+          console.error('参数解析失败:', parseError, '原始参数:', toolCallArgsStr);
+          parsedArgs = {};
+        }
+        
         const mcpRes = await getMcpClient().callTool({
           name: toolName,
-          arguments: JSON.parse(toolCallArgsStr),
+          arguments: parsedArgs,
         });
         console.log("MCP工具调用完成，返回结果:", JSON.stringify(mcpRes));
         console.log("MCP工具返回内容:", mcpRes.content);
+        
+        let mcpContentText = "";
+        if (Array.isArray(mcpRes.content) && mcpRes.content.length > 0) {
+          mcpContentText = mcpRes.content[0].text;
+          console.log("提取的 mcpContentText:", mcpContentText.substring(0, 200));
+        } else {
+          console.error("MCP返回内容格式不正确:", mcpRes.content);
+        }
+        
+        let resultMessage = "MCP工具调用成功！";
+        
+       
         // 返回前端
-        const result = { type: "mcpContent", content: "MCP工具调用成功！", toolName: toolName, toolResult: JSON.stringify(mcpRes), toolCallCount: toolCallCount };
+        const result = { type: "mcpContent", content: resultMessage, toolName: toolName, toolResult: mcpContentText, toolResultRaw: mcpContentText, toolCallCount: toolCallCount };
         console.log('发送MCP内容事件到前端:', JSON.stringify(result));
         notifStream(res, result);
         // 再次调用大模型组合对话
-        messages.push({ role: "user", content: mcpRes.content as string });
+        messages.push({ role: "user", content: mcpContentText });
         const completionb = await openai.chat.completions.create({
           model: "qwen3-235b-a22b",
           messages,

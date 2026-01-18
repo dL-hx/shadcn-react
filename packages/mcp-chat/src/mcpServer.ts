@@ -2,12 +2,11 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
+import { weatherService } from "./services/weatherService.js";
+import { webpageService } from "./services/webpageService.js";
 
 const app = express();
 app.use(express.json());
-
-const HOST = 'https://restapi.amap.com';
-const KEY = 'ee50d4053a18506d66a0f826de884cd1';
 
 const server = new Server(
   {
@@ -38,74 +37,34 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["address"],
         },
       },
+      {
+        name: "fetch_webpage",
+        description: "爬取指定网页的内容并提取主要文本信息",
+        inputSchema: {
+          type: "object",
+          properties: {
+            url: {
+              type: "string",
+              description: "要爬取的网页URL（例如：https://example.com）",
+            },
+          },
+          required: ["url"],
+        },
+      },
     ],
   };
 });
 
-async function queryWeather(address: string) {
-  try {
-    const geocodeUrl = `${HOST}/v3/geocode/geo`;
-    const geocodeResponse = await fetch(`${geocodeUrl}?key=${KEY}&address=${encodeURIComponent(address)}`);
-    
-    console.log('地理编码API响应:', geocodeResponse.status, await geocodeResponse.clone().text());
-    
-    if (!geocodeResponse.ok) {
-      throw new Error(`地理编码API调用失败: ${geocodeResponse.status}`);
-    }
-    
-    const geocodeData = await geocodeResponse.json();
-    
-    if (geocodeData.status !== '1') {
-      throw new Error(`查询${address}的天气情况失败：${geocodeData.info}`);
-    }
-    
-    const cityAdcode = geocodeData.geocodes[0].adcode;
-    
-    const weatherUrl = `${HOST}/v3/weather/weatherInfo`;
-    const weatherResponse = await fetch(`${weatherUrl}?key=${KEY}&city=${cityAdcode}`);
-    
-    console.log('天气API响应:', weatherResponse.status, await weatherResponse.clone().text());
-    
-    if (!weatherResponse.ok) {
-      throw new Error(`天气API调用失败: ${weatherResponse.status}`);
-    }
-    
-    const weatherData = await weatherResponse.json();
-    
-    if (weatherData.status !== '1') {
-      throw new Error(`查询${address}的天气情况失败：${weatherData.info}`);
-    }
-    
-    return weatherData;
-  } catch (error) {
-    console.error('天气查询错误:', error);
-    return {
-      status: '1',
-      lives: [
-        {
-          province: '陕西',
-          city: '西安市',
-          adcode: '610100',
-          weather: '阴',
-          temperature: '2',
-          winddirection: '西南',
-          windpower: '≤3',
-          humidity: '100',
-          reporttime: '2026-01-03 22:02:47',
-          temperature_float: '2.0',
-          humidity_float: '100.0'
-        }
-      ]
-    };
-  }
-}
-
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  console.log('MCP服务器收到工具调用请求:');
+  console.log('  工具名称:', name);
+  console.log('  原始参数:', JSON.stringify(args, null, 2));
 
   if (name === "get_weather") {
     const address = args?.address as string;
-    const weatherData = await queryWeather(address);
+    console.log('  解析到的地址:', address);
+    const weatherData = await weatherService.queryWeather(address);
     
     return {
       content: [
@@ -117,6 +76,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
   }
 
+  if (name === "fetch_webpage") {
+    const url = args?.url as string;
+    console.log('  解析到的URL:', url);
+    const webpageData = await webpageService.fetchWebpage(url);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(webpageData, null, 2),
+        },
+      ],
+    };
+  }
+
+  console.log('  返回未知工具错误:', name);
   return {
     content: [
       {
@@ -138,7 +112,9 @@ app.all("/mcp", async (req, res) => {
 });
 
 app.listen(3001, () => {
-  console.log("天气查询 MCP 服务器运行在 http://localhost:3001");
+  console.log("MCP 服务器运行在 http://localhost:3001");
   console.log("MCP 端点: http://localhost:3001/mcp");
-  console.log("使用高德地图 API 进行天气查询");
+  console.log("可用工具:");
+  console.log("  - get_weather: 天气查询（使用高德地图 API）");
+  console.log("  - fetch_webpage: 网页内容爬取（使用百炼大模型总结）");
 });

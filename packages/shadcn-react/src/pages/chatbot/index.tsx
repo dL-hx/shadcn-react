@@ -1,5 +1,5 @@
 import { useState, useRef,useEffect}from 'react';
-import { Send } from 'lucide-react';
+import { Send, Square } from 'lucide-react';
 import { weatherService } from '@/lib/weather';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { ActionButtons } from './components/ActionButtons';
 import { MarkdownContent } from './components/MarkdownContent';
 import { ToolCall } from './components/ToolCall';
 import { McpServerSelector } from './components/McpServerSelector';
+import { JsonViewer } from './components/JsonViewer';
 
 interface ChatMessage {
   id: string;
@@ -28,6 +29,7 @@ interface ChatMessage {
   };
   toolCallCount?: number;
   userInput?: string;
+  toolResultRaw?: string;
 }
 
 interface StreamUpdate {
@@ -41,6 +43,7 @@ interface StreamUpdate {
   toolCallCount?: number;
   hasActionButtons?: boolean;
   isStreaming?: boolean;
+  toolResultRaw?: string;
 }
 
 export default function Chatbot() {
@@ -58,6 +61,7 @@ export default function Chatbot() {
   const streamingMessageId = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const [currentMcpServer, setCurrentMcpServer] = useState<string>('');
+  const [isStreaming, setIsStreaming] = useState(false);
 
 
 
@@ -89,6 +93,7 @@ export default function Chatbot() {
       userInput: userInput,
     };
     setMessages((prev) => [...prev, botMessage]);
+    setIsStreaming(true);
 
     const onStreamUpdate = (update: StreamUpdate) => {
       setMessages((prev) => 
@@ -101,7 +106,7 @@ export default function Chatbot() {
     };
 
     try {
-      await streamBotResponse(userInput, onStreamUpdate, deepSearch);
+      await streamBotResponse(userInput, onStreamUpdate, deepSearch, abortControllerRef);
     } catch (error) {
       console.error('Error:', error);
       setMessages((prev) => 
@@ -114,6 +119,24 @@ export default function Chatbot() {
     } finally {
       streamingMessageId.current = null;
       abortControllerRef.current = null;
+      setIsStreaming(false);
+    }
+  };
+
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      console.log('请求已终止');
+      setIsStreaming(false);
+      if (streamingMessageId.current) {
+        setMessages((prev) => 
+          prev.map(msg => 
+            msg.id === streamingMessageId.current 
+              ? { ...msg, isStreaming: false, text: msg.text || '请求已终止' }
+              : msg
+          )
+        );
+      }
     }
   };
 
@@ -156,6 +179,9 @@ export default function Chatbot() {
                   toolCallCount={message.toolCallCount}
                 />
               )}
+              {!message.isUser && message.toolResultRaw && (
+                <JsonViewer data={message.toolResultRaw} title="MCP工具原始返回数据" />
+              )}
               <div className={message.isUser ? '' : 'bg-gray-50 dark:bg-gray-900 rounded-lg p-4'}>
                 {message.isUser ? (
                   <Message
@@ -187,10 +213,17 @@ export default function Chatbot() {
               placeholder="请输入您的问题，可以查询天气或询问其他问题..."
               className="flex-1"
             />
-            <Button onClick={handleSendMessage}>
-              <Send className="h-4 w-4 mr-2" />
-              发送
-            </Button>
+            {isStreaming ? (
+              <Button onClick={handleStop} variant="destructive">
+                <Square className="h-4 w-4 mr-2" />
+                停止
+              </Button>
+            ) : (
+              <Button onClick={handleSendMessage}>
+                <Send className="h-4 w-4 mr-2" />
+                发送
+              </Button>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Toggle
@@ -211,12 +244,13 @@ export default function Chatbot() {
   );
 }
 
-async function streamBotResponse(userInput: string, onStreamUpdate: (update: StreamUpdate) => void, deepSearch: boolean) {
-  await callMcpChat(userInput, onStreamUpdate, deepSearch);
+async function streamBotResponse(userInput: string, onStreamUpdate: (update: StreamUpdate) => void, deepSearch: boolean, abortControllerRef: React.MutableRefObject<AbortController | null>) {
+  await callMcpChat(userInput, onStreamUpdate, deepSearch, abortControllerRef);
 }
 
-async function callMcpChat(userInput: string, onStreamUpdate: (update: StreamUpdate) => void, deepSearch: boolean) {
+async function callMcpChat(userInput: string, onStreamUpdate: (update: StreamUpdate) => void, deepSearch: boolean, abortControllerRef: React.MutableRefObject<AbortController | null>) {
   const abortController = new AbortController();
+  abortControllerRef.current = abortController;
 
   try {
     console.log('Calling mcp-chat with input:', userInput, 'deepSearch:', deepSearch);
@@ -298,6 +332,7 @@ async function callMcpChat(userInput: string, onStreamUpdate: (update: StreamUpd
               toolCallStatus = 'completed';
               toolCallResult = data.content;
               const toolCallCount = data.toolCallCount || 1;
+              const toolResultRaw = data.toolResultRaw || '';
               console.log('前端收到MCP内容事件:', data.content);
               if (deepThinkingStarted && deepThinkingContent) {
                 accumulatedText += data.content;
@@ -306,7 +341,8 @@ async function callMcpChat(userInput: string, onStreamUpdate: (update: StreamUpd
                   deepThinking: deepThinkingContent,
                   hasActionButtons: true,
                   toolCall: { name: toolCallName, status: toolCallStatus, result: toolCallResult },
-                  toolCallCount: toolCallCount
+                  toolCallCount: toolCallCount,
+                  toolResultRaw: toolResultRaw
                 });
               } else {
                 accumulatedText += `\n${data.content}\n`;
@@ -314,7 +350,8 @@ async function callMcpChat(userInput: string, onStreamUpdate: (update: StreamUpd
                   text: accumulatedText,
                   hasActionButtons: true,
                   toolCall: { name: toolCallName, status: toolCallStatus, result: toolCallResult },
-                  toolCallCount: toolCallCount
+                  toolCallCount: toolCallCount,
+                  toolResultRaw: toolResultRaw
                 });
               }
             } else if (data.type === 'error' && data.content) {
